@@ -119,7 +119,7 @@ def take_random_word(conn, user_id):
                  WHERE user_id = %s
                  ORDER BY ((wrong_answer + 1.0) / (right_answer + 1.0)) DESC                 
                  LIMIT 5
-                 )
+                 ) as top
                  ORDER BY RANDOM() LIMIT 1
                 """, (user_id,))
         return cur.fetchone()
