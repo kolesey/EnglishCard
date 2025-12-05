@@ -3,16 +3,18 @@ import os
 import psycopg2
 
 load_dotenv()
+HOST = os.environ.get('HOST')
+PORT = os.environ.get('PORT')
 DATABASE = os.environ.get('DATABASE')
 DB_USER = os.environ.get('DB_USER')
 DB_PASS = os.environ.get('DB_PASS')
 
 # Проверяем все ли настройки БД есть в переменных окружения
-if any(item is None for item in [DATABASE, DB_USER, DB_PASS]):
+if any(item is None for item in [HOST, PORT, DATABASE, DB_USER, DB_PASS]):
     raise ValueError('Параметры подключения к БД не установлены в переменных окружения.')
 
 def create_db_connection():
-    conn = psycopg2.connect(database=DATABASE, user=DB_USER, password=DB_PASS)
+    conn = psycopg2.connect(host=HOST, port=PORT, database=DATABASE, user=DB_USER, password=DB_PASS)
     return conn
 
 def create_tables(conn):
