@@ -1,18 +1,23 @@
+import os, sys
+from config import OTHER_WORDS_COUNT, ACTIVATE_THIS_PATH
+if sys.platform != 'win32':
+    with open(ACTIVATE_THIS_PATH) as f:
+         exec(f.read(), {'__file__': ACTIVATE_THIS_PATH})
+
 from dotenv import load_dotenv
-import os
+load_dotenv()
+
 import random
 
 from telebot import types, TeleBot, custom_filters
 from telebot.storage import StateMemoryStorage
 from telebot.handler_backends import State, StatesGroup
 
-from config import OTHER_WORDS_COUNT
 from db.db import create_db_connection, add_user, find_user, add_words, take_random_word, count_words, take_other_words, \
     del_word, add_rigt_answer, add_wrong_answer
 from random_word.random_word import get_random_word
 from yandex_translate.yandex_translate import translate
 
-load_dotenv()
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 
 if TELEGRAM_TOKEN is None:
