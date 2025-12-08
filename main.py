@@ -44,6 +44,8 @@ class Command:
     ADD_RAND_WORD = 'Добавить случайное слово'
     DELETE_WORD = 'Удалить слово🔙'
     NEXT = 'Дальше ⏭'
+    YES = '=Да='
+    NO = '=Нет='
     CANCEL = '=Отмена='
 
 class MyStates(StatesGroup):
@@ -89,7 +91,6 @@ def create_cards(message):
     cid = message.chat.id
     markup = types.ReplyKeyboardMarkup(row_width=2)
 
-    global buttons
     buttons = []
     conn = create_db_connection()
     # Получаем из БД пару слов
@@ -146,6 +147,7 @@ def create_cards(message):
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         data['target_word'] = target_word
         data['translate_word'] = translate
+        data['buttons'] = buttons
 
 
 @bot.message_handler(commands=['start'])
@@ -233,11 +235,12 @@ def translate_word(message):
             en_word = word
 
         markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=False, one_time_keyboard=True)
-        add_word_btn = types.KeyboardButton(f'Добавить пару {ru_word} - {en_word} в словарь.')
+        add_word_btn = types.KeyboardButton(Command.YES)
+        # add_word_btn = types.KeyboardButton(f'Добавить пару {ru_word} - {en_word} в словарь.')
         cancel_btn = types.KeyboardButton(Command.CANCEL)
         markup.add(add_word_btn)
         markup.add(cancel_btn)
-        bot.reply_to(message, f'{ru_word}-{en_word}', reply_markup=markup)
+        bot.reply_to(message, f'Добавить пару {ru_word}-{en_word} в словарь?', reply_markup=markup)
         # Устанавливаем стэйт для сохранения пары слов в БД
         bot.set_state(message.from_user.id, MyStates.save_word, message.chat.id)
         with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
@@ -251,7 +254,7 @@ def save_word(message):
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
         markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=False, one_time_keyboard=True)
         markup.add(types.KeyboardButton(Command.NEXT))
-        if data['ru_word'] and data['en_word'] and message.chat.id:
+        if data['ru_word'] and data['en_word'] and message.chat.id and message.text == Command.YES:
 
             # Сохраняем слово в БД
             conn = create_db_connection()
@@ -265,7 +268,9 @@ def save_word(message):
 
             bot.reply_to(message, msg, reply_markup=markup)
             bot.delete_state(message.from_user.id, message.chat.id)
-
+        else:
+            bot.reply_to(message, 'Что-то пошло не так', reply_markup=markup)
+            bot.delete_state(message.from_user.id, message.chat.id)
 
 # Хэндлер для кнопки удалить слово
 @bot.message_handler(func=lambda message: message.text == Command.DELETE_WORD)
@@ -302,8 +307,8 @@ def delete_word(message):
 @bot.message_handler(func=lambda message: True, content_types=['text'], state=MyStates.check_answer)
 def message_reply(message):
     text = message.text
-
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        # print(data)
         # print('Ответ: ', text)
         if 'target_word' in data:
             target_word = data['target_word']
@@ -330,6 +335,7 @@ def message_reply(message):
                 conn = create_db_connection()
                 add_wrong_answer(conn, message.chat.id, target_word)
                 conn.close()
+                buttons = data['buttons']
                 for btn in buttons:
                     if btn.text == text:
                         btn.text = text + '❌'
