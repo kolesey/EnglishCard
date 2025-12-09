@@ -56,33 +56,6 @@ class MyStates(StatesGroup):
     delete_word = State()
 
 
-def main_dialog_(message):
-    """
-    Функция проверяет наличие минимального количества слов в словаре/
-    В зависимости от количества слов, либо предлагает ввести новое слово в словарь, либо выводит основной диалог
-    :param message:
-    :return:
-    """
-
-    cid = message.chat.id
-    conn = create_db_connection()
-    # Получаем количество слов пользователя в словаре
-    # dict_len = count_words(conn, cid)
-    dict_len = 10
-    conn.close()
-
-    # Проверяем наличие минимального количества слов в словаре
-    if dict_len < OTHER_WORDS_COUNT:
-        # Устанавливаем стэйт на ожидание ввода слова для словаря
-        bot.set_state(message.from_user.id, MyStates.waitng_for_word, cid)
-        bot.send_message(cid, "У Вас в словаре мало слов. "
-                              "Введите слово, которое хотите добавить.",
-                         reply_markup=types.ReplyKeyboardRemove())
-    else:
-        # Выводим основной диалог игры
-        create_cards(message)
-
-
 def main_dialog(message):
     """
     Функция построения основного диалога игры
