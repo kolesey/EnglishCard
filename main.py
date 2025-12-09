@@ -14,7 +14,7 @@ from telebot.storage import StateMemoryStorage
 from telebot.handler_backends import State, StatesGroup
 
 from db.db import create_db_connection, add_user, find_user, add_words, take_random_word, count_words, take_other_words, \
-    del_word, add_rigt_answer, add_wrong_answer
+    del_word, add_right_answer, add_wrong_answer
 from random_word.random_word import get_random_word
 from yandex_translate.yandex_translate import translate
 
@@ -56,7 +56,7 @@ class MyStates(StatesGroup):
     delete_word = State()
 
 
-def main_dialog(message):
+def main_dialog_(message):
     """
     Функция проверяет наличие минимального количества слов в словаре/
     В зависимости от количества слов, либо предлагает ввести новое слово в словарь, либо выводит основной диалог
@@ -67,7 +67,8 @@ def main_dialog(message):
     cid = message.chat.id
     conn = create_db_connection()
     # Получаем количество слов пользователя в словаре
-    dict_len = count_words(conn, cid)
+    # dict_len = count_words(conn, cid)
+    dict_len = 10
     conn.close()
 
     # Проверяем наличие минимального количества слов в словаре
@@ -82,19 +83,31 @@ def main_dialog(message):
         create_cards(message)
 
 
-def create_cards(message):
+def main_dialog(message):
     """
     Функция построения основного диалога игры
     :param message:
     :return:
     """
     cid = message.chat.id
+    conn = create_db_connection()
+    # Запрашиваем имя пользователя из БД
+    user_name = find_user(conn, cid)
+    conn.close()
+    # Если пользователь не найден отправляем на /start
+    if user_name is None:
+        markup = types.ReplyKeyboardMarkup(row_width=1)
+        markup.add(types.KeyboardButton('/start'))
+        bot.send_message(message.chat.id, 'Мы не нашли вас в базе данных. Нажмите /start', reply_markup=markup)
+        return True
+
     markup = types.ReplyKeyboardMarkup(row_width=2)
 
     buttons = []
     conn = create_db_connection()
     # Получаем из БД пару слов
     pair = list(take_random_word(conn, cid))
+
     rus_word = pair[0]
 
     # Перемешиваем направление перевода en-ru или ru-en
@@ -165,7 +178,7 @@ def start_command(message):
     if user_name is None:
         # Если пользователя нет в БД устанавливаем стэйт на добавление имени пользователя
         bot.set_state(message.from_user.id, MyStates.waitng_for_name, cid)
-        bot.send_message(cid, "Привет, давай знакомиться. Как тебя зовут?")
+        bot.send_message(cid, "Привет, давай знакомиться. Как тебя зовут?", reply_markup=types.ReplyKeyboardRemove())
     else:
         # Приветствуем пользователя и запускаем основной диалог
         bot.send_message(cid, f"Привет, {user_name[0]}!")
@@ -236,7 +249,6 @@ def translate_word(message):
 
         markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=False, one_time_keyboard=True)
         add_word_btn = types.KeyboardButton(Command.YES)
-        # add_word_btn = types.KeyboardButton(f'Добавить пару {ru_word} - {en_word} в словарь.')
         cancel_btn = types.KeyboardButton(Command.CANCEL)
         markup.add(add_word_btn)
         markup.add(cancel_btn)
@@ -279,7 +291,7 @@ def delete_question(message):
         # Если есть что удалять
         if 'translate_word' in data:
             markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=False, one_time_keyboard=True)
-            del_word_btn = types.KeyboardButton(f'Удалить слово {data['translate_word']} из словаря')
+            del_word_btn = types.KeyboardButton(Command.YES)
             next_btn = types.KeyboardButton(Command.CANCEL)
             markup.add(del_word_btn)
             markup.add(next_btn)
@@ -292,17 +304,19 @@ def delete_question(message):
 def delete_word(message):
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
 
+        markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=False, one_time_keyboard=True)
+        markup.add(types.KeyboardButton(Command.NEXT))
         # Если определено слово для удаления
-        if 'translate_word' in data:
-            markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=False, one_time_keyboard=True)
-            markup.add(types.KeyboardButton(Command.NEXT))
+        if 'translate_word' in data and message.text == Command.YES:
             if data['translate_word'] and message.chat.id:
                 conn = create_db_connection()
                 count = del_word(conn, message.chat.id, data['translate_word'])
                 conn.close()
                 bot.reply_to(message, f'Удалено слов из словаря - {count}', reply_markup=markup)
                 bot.delete_state(message.from_user.id, message.chat.id)
-
+        else:
+            bot.reply_to(message, 'Что-то пошло не так', reply_markup=markup)
+            bot.delete_state(message.from_user.id, message.chat.id)
 
 @bot.message_handler(func=lambda message: True, content_types=['text'], state=MyStates.check_answer)
 def message_reply(message):
@@ -316,7 +330,7 @@ def message_reply(message):
             if text == target_word:
                 # Добавляем 1 к счетчику правильных ответов слова
                 conn = create_db_connection()
-                add_rigt_answer(conn, message.chat.id, target_word)
+                add_right_answer(conn, message.chat.id, target_word)
                 conn.close()
                 hint = show_target(data)
                 hint_text = ["Отлично!❤", hint]
