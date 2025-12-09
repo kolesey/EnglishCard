@@ -13,7 +13,7 @@ from telebot import types, TeleBot, custom_filters
 from telebot.storage import StateMemoryStorage
 from telebot.handler_backends import State, StatesGroup
 
-from db.db import create_db_connection, add_user, find_user, add_words, take_random_word, count_words, take_other_words, \
+from db.db import create_db_connection, add_user, find_user, add_words, take_random_word, take_other_words, \
     del_word, add_right_answer, add_wrong_answer
 from random_word.random_word import get_random_word
 from yandex_translate.yandex_translate import translate
