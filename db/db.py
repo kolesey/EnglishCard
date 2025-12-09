@@ -253,7 +253,7 @@ def take_other_words(conn, user_id, ex_word, lang, count=5):
                       FROM words w
                       JOIN userwords uw
                         ON w.word_id = uw.word_id
-                     WHERE uw.user_id = %s AND w.rus_word <> %s
+                     WHERE uw.user_id = %s AND w.en_word <> %s
                      ORDER BY RANDOM() LIMIT %s
                     """, (user_id, ex_word, count))
             result = cur.fetchall()
