@@ -187,7 +187,7 @@ def take_random_word(conn, user_id):
                       JOIN userwords uw
                         ON w.word_id = uw.word_id
                      WHERE uw.user_id = %s
-                     ORDER BY ((uw.wrong_answer + 1.0) / (uw.right_answer + 1.0))
+                     ORDER BY ((uw.wrong_answer + 1.0) / (uw.right_answer + 1.0)) DESC
                      LIMIT 5
               ) as top
              ORDER BY RANDOM()
